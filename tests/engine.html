@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Engine tests</title>
+<pre id="out">running…</pre>
+<script type="module">
+import * as E from '../js/engine.js';
+const out = [];
+let fails = 0;
+const eq = (name, got, want) => {
+  const ok = JSON.stringify(got) === JSON.stringify(want);
+  if (!ok) fails++;
+  out.push(`${ok ? 'PASS' : 'FAIL'} ${name}${ok ? '' : ` — got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`}`);
+};
+const C = s => { const suit = s.slice(-1), r = s.slice(0, -1); return { id: s, suit, rank: ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].indexOf(r) + 1, joker: false }; };
+const J = n => ({ id: `JK${n}`, rank: 0, suit: null, joker: true });
+const hand = (...ids) => E.classify(ids.map(C));
+
+eq('pair', hand('5H', '5C'), 'pair');
+eq('not pair', hand('5H', '6C'), null);
+eq('trips', hand('7S', '7H', '7D'), 'trips');
+eq('two pair', hand('JS', 'JD', '5H', '5C'), 'twoPair');
+eq('quads', hand('KS', 'KH', 'KD', 'KC'), 'quads');
+eq('straight', hand('3C', '4H', '5S', '6D', '7C'), 'straight');
+eq('ace-low straight', hand('AC', '2H', '3S', '4D', '5C'), 'straight');
+eq('ace-high straight', hand('10C', 'JH', 'QS', 'KD', 'AC'), 'straight');
+eq('no wraparound', hand('QC', 'KH', 'AS', '2D', '3C'), null);
+eq('flush', hand('2S', '6S', '9S', 'JS', 'KS'), 'flush');
+eq('full house', hand('QS', 'QH', 'QD', '5C', '5D'), 'fullHouse');
+eq('straight flush', hand('3C', '4C', '5C', '6C', '7C'), 'straightFlush');
+eq('steel wheel', hand('AC', '2C', '3C', '4C', '5C'), 'straightFlush');
+eq('royal', hand('10H', 'JH', 'QH', 'KH', 'AH'), 'royalFlush');
+eq('quads + kicker invalid', hand('KS', 'KH', 'KD', 'KC', '2C'), null);
+eq('pair + junk invalid', hand('KS', 'KH', '2D'), null);
+
+// Table: columns bottom→top.
+const cols = [
+  [C('5H'), C('9C'), C('2D')],
+  [C('5C'), J(1), C('KD')],
+  [J(2), C('7S'), C('KC')],
+];
+eq('adjacent pair ok', E.evaluatePlay(cols, ['5H', '5C']).ok, true);
+eq('non-touching invalid', E.evaluatePlay(cols, ['2D', 'KC']).ok, false);
+eq('joker + neighbour', E.evaluatePlay(cols, ['JK1', '9C']).hand?.id, 'joker');
+eq('joker (row 1) + far card invalid', E.evaluatePlay(cols, ['JK1', '2D']).ok, false);
+eq('bottom joker + any card', E.evaluatePlay(cols, ['JK2', '2D']).hand?.id, 'joker');
+eq('joker + 2 cards invalid', E.evaluatePlay(cols, ['JK1', '9C', '5C']).ok, false);
+eq('kings touching', E.evaluatePlay(cols, ['KD', 'KC']).hand?.id, 'pair');
+
+const r1 = E.removeCards(cols, ['5H', '9C', '2D']);
+eq('empty column slides left', r1.cols.length, 2);
+eq('columns cleared count', r1.columnsCleared, 1);
+eq('cards fall', E.removeCards(cols, ['5C']).cols[1].map(c => c.id), ['JK1', 'KD']);
+
+// Enumeration finds each group once.
+const grid = [[C('2S'), C('2H')], [C('2D'), C('2C')]];
+const plays = E.findHandPlays(grid);
+eq('2x2 of twos: best is quads', plays[0].hand.id, 'quads');
+eq('2x2 of twos: 4 pairs + 4 trips + 1 quads', plays.length, 9);
+eq('hasAnyPlay', E.hasAnyPlay(grid), true);
+eq('no plays', E.hasAnyPlay([[C('2S')], [C('5H')]]), false);
+
+// Deal reproducibility & composition.
+const d1 = E.deal(12345), d2 = E.deal(12345);
+eq('deal is deterministic', JSON.stringify(d1) === JSON.stringify(d2), true);
+eq('deal 8 cols x 7', d1.map(c => c.length), [7,7,7,7,7,7,7,7]);
+eq('56 unique cards', new Set(d1.flat().map(c => c.id)).size, 56);
+eq('4 jokers', d1.flat().filter(c => c.joker).length, 4);
+
+// Score formula matches the original's scoreboard from a real game.
+const fs = E.finalScore({ handCounts: { pair: 11, twoPair: 1, trips: 1, straight: 2, flush: 1 }, cardsRemoved: 52, timerBonus: 0, cardsRemaining: 4 });
+eq('game score', fs.gameScore, 1450);
+// The original showed $5,735 because its timer bonus kept falling below $0 while
+// displaying 0; here the timer stops at $0, so the lines add up as shown.
+eq('different hands bonus', fs.differentBonus, 1250);
+eq('cards removed + clear bonus', fs.removedBonus + fs.clearBonus, 3350);
+eq('final score', fs.final, 6050);
+
+// Random self-play: every listed play must be legal, and the game must end.
+let t0 = performance.now(), games = 0, maxPlays = 0;
+for (let seed = 1; seed <= 200; seed++) {
+  let c = E.deal(seed), n = 0;
+  while (E.hasAnyPlay(c)) {
+    const p = E.findHandPlays(c)[0] || E.findJokerPlay(c);
+    if (!E.evaluatePlay(c, p.ids).ok) { eq(`listed play legal (seed ${seed})`, false, true); break; }
+    c = E.removeCards(c, p.ids).cols; n++;
+  }
+  maxPlays = Math.max(maxPlays, n); games++;
+}
+out.push(`INFO self-played ${games} games in ${(performance.now() - t0).toFixed(0)}ms, max ${maxPlays} plays`);
+t0 = performance.now();
+for (let i = 0; i < 50; i++) E.findHandPlays(E.deal(i));
+out.push(`INFO findHandPlays on full table: ${((performance.now() - t0) / 50).toFixed(2)}ms`);
+out.push(fails ? `${fails} FAILED` : 'ALL PASSED');
+document.getElementById('out').textContent = out.join('\n');
+</script>

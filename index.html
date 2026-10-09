@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Poker Challenge</title>
+  <meta name="description" content="Find poker hands in a table of cards, clear the board and beat the entry fee. A web remake of the classic Windows game.">
+  <meta name="theme-color" content="#0b1a2e">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 C56 18 92 40 92 62 C92 76 81 85 69 85 C61 85 56 81 53 76 C54 84 58 90 66 94 L34 94 C42 90 46 84 47 76 C44 81 39 85 31 85 C19 85 8 76 8 62 C8 40 44 18 50 6 Z"/></svg>
+        <div>
+          <h1>Poker Challenge</h1>
+          <button class="deal-no" id="dealNo" type="button" title="Copy a link to this deal">Deal #—</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat" id="timerStat" title="Counts down $5 a second once you make your first play. Hints cost $50.">
+          <span class="stat-label">Timer bonus</span>
+          <span class="stat-value" id="timer">$2,000</span>
+        </div>
+        <div class="stat score" id="scoreStat" title="Turns green once you've covered the $1,000 entry fee.">
+          <span class="stat-label">Game</span>
+          <span class="stat-value" id="score">$0</span>
+        </div>
+      </div>
+
+      <nav class="tools" aria-label="Game controls">
+        <button class="tool" id="hintBtn" type="button" title="Hint (H)"><svg viewBox="0 0 24 24"><path d="M9 21h6M10 17h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg><span>Hint</span></button>
+        <button class="tool" id="undoBtn" type="button" title="Undo last move (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span></button>
+        <button class="tool" id="pauseBtn" type="button" title="Pause (P)"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg><span>Pause</span></button>
+        <button class="tool" id="newBtn" type="button" title="New game (N)"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5"/></svg><span>New</span></button>
+        <button class="tool" id="menuBtn" type="button" title="Menu" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button>
+        <div class="menu" id="menu" role="menu" hidden>
+          <button role="menuitem" data-action="restart" type="button">Restart this deal</button>
+          <button role="menuitem" data-action="players" type="button">Players</button>
+          <button role="menuitem" data-action="topten" type="button">High scores</button>
+          <button role="menuitem" data-action="stats" type="button">Game stats</button>
+          <button role="menuitem" data-action="help" type="button">How to play</button>
+          <label class="menu-toggle"><input type="checkbox" id="soundToggle"> Sound effects</label>
+        </div>
+      </nav>
+    </header>
+
+    <main class="table" id="table">
+      <div class="board" id="board" aria-label="Card table"></div>
+      <div class="paused-cover" id="pausedCover" hidden>
+        <p>Game paused</p>
+        <button class="btn primary" id="resumeBtn" type="button">Resume</button>
+      </div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+
+    <section class="actionbar">
+      <div class="selection" id="selectionInfo">Click cards to build a hand</div>
+      <div class="action-buttons">
+        <button class="btn ghost" id="clearBtn" type="button" disabled>Clear</button>
+        <button class="btn primary" id="playBtn" type="button" disabled>Play hand</button>
+      </div>
+    </section>
+
+    <section class="hands" id="hands" aria-label="Hand values"></section>
+
+    <footer class="footer">
+      <button class="player-chip" id="playerChip" type="button" title="Change player"><span id="playerName">No player</span></button>
+      <span>Bankroll <strong id="bankroll">$0</strong></span>
+      <span class="footer-fee">Entry fee $1,000</span>
+    </footer>
+  </div>
+
+  <!-- Dialogs -->
+  <dialog id="playersDlg" class="dlg">
+    <h2>Players</h2>
+    <p class="muted" id="playersNote">Pick who's playing, or add a new player.</p>
+    <ul class="player-list" id="playerList"></ul>
+    <form class="add-player" id="addPlayerForm">
+      <input id="newPlayerName" type="text" maxlength="24" placeholder="New player name" autocomplete="off" aria-label="New player name">
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+    <p class="form-error" id="playerError"></p>
+    <div class="dlg-actions"><button class="btn ghost" id="playersClose" data-close type="button">Close</button></div>
+  </dialog>
+
+  <dialog id="scoreDlg" class="dlg wide">
+    <h2 id="scoreTitle">Scoreboard</h2>
+    <p class="banner" id="scoreBanner"></p>
+    <table class="scoreboard" id="scoreTable"></table>
+    <div class="dlg-actions">
+      <button class="btn ghost" id="sameDealBtn" type="button">Same deal</button>
+      <button class="btn ghost" data-close type="button">Close</button>
+      <button class="btn primary" id="newDealBtn" type="button" autofocus>New deal</button>
+    </div>
+  </dialog>
+
+  <dialog id="toptenDlg" class="dlg">
+    <h2>High scores</h2>
+    <ol class="topten" id="toptenList"></ol>
+    <div class="dlg-actions">
+      <button class="btn ghost danger" id="clearTopTenBtn" type="button">Reset</button>
+      <button class="btn primary" data-close type="button">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="statsDlg" class="dlg">
+    <h2>Game stats</h2>
+    <div id="statsBody"></div>
+    <div class="dlg-actions"><button class="btn primary" data-close type="button">Close</button></div>
+  </dialog>
+
+  <dialog id="hintDlg" class="dlg">
+    <h2>Hint</h2>
+    <p class="riddle" id="hintText"></p>
+    <p class="muted small">Each hint costs $50 of your timer bonus.</p>
+    <div class="dlg-actions">
+      <button class="btn ghost" id="revealBtn" type="button">Show me the cards (−$50)</button>
+      <button class="btn primary" data-close type="button">Got it</button>
+    </div>
+  </dialog>
+
+  <dialog id="handDlg" class="dlg">
+    <h2 id="handTitle"></h2>
+    <p id="handDesc"></p>
+    <div class="example" id="handExample"></div>
+    <div class="dlg-actions"><button class="btn primary" data-close type="button">Close</button></div>
+  </dialog>
+
+  <dialog id="confirmDlg" class="dlg">
+    <h2 id="confirmTitle"></h2>
+    <p id="confirmText"></p>
+    <div class="dlg-actions" id="confirmActions"></div>
+  </dialog>
+
+  <dialog id="helpDlg" class="dlg wide">
+    <h2>How to play</h2>
+    <div class="help">
+      <p>The table is dealt 8 columns of 7 cards: a full deck plus four Jokers. Find <strong>poker hands</strong> made of cards that <strong>touch</strong> each other (left, right, above or below), select them, and play them. They're removed, you score their value, and the cards above them fall down. When a whole column empties, the columns to its right slide over to close the gap.</p>
+      <div class="help-example" id="helpExample"></div>
+      <h3>Making a play</h3>
+      <ul>
+        <li>Click (or tap) cards to select them. Click again to deselect.</li>
+        <li>Press <kbd>Play hand</kbd>, right-click the table, or press <kbd>Enter</kbd> to play.</li>
+        <li>The bar above the hand list tells you what your selection makes before you play it.</li>
+      </ul>
+      <h3>Jokers</h3>
+      <p>Jokers aren't wild. A Joker can remove <strong>one card it touches</strong>, taking itself away too. A Joker sitting on the <strong>bottom row</strong> is more powerful: it can remove <strong>any</strong> card on the table. Joker plays score nothing, but they're great for clearing a card that's in the way.</p>
+      <h3>Scoring</h3>
+      <ul>
+        <li>Every game costs a <strong>$1,000 entry fee</strong> from your bankroll. Once your hands are worth more than that, your score turns green.</li>
+        <li>The game ends when the computer finds no plays left. Your final score is your hands plus bonuses, and it's added to your bankroll.</li>
+        <li><strong>Different hands:</strong> $250 for each type of hand you made at least once. The hand list lights up as you collect them.</li>
+        <li><strong>Cards removed:</strong> $50 per card, plus a big bonus if you finish with 10 or fewer cards left.</li>
+        <li><strong>Timer bonus:</strong> starts at $2,000 and drops $5 a second from your first play. Hints cost $50 of it.</li>
+      </ul>
+      <h3>Tips</h3>
+      <ul>
+        <li>Go for the high-value hands first. You rarely beat the entry fee on pairs alone.</li>
+        <li>Work Jokers down to the bottom row, where they can remove anything.</li>
+        <li>Keep the columns even. A short column between two tall ones is worth clearing: the tall ones then slide together and create new hands.</li>
+        <li>Think a few moves ahead. Clearing one card can drop a whole column into a four of a kind.</li>
+      </ul>
+      <h3>Keyboard</h3>
+      <p class="keys"><kbd>Enter</kbd> play · <kbd>Esc</kbd> clear selection · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>H</kbd> hint · <kbd>P</kbd> pause · <kbd>N</kbd> new game</p>
+      <p class="muted small">A web remake of <em>Poker Challenge</em> by NorthStar Solutions, made with the creator's permission.</p>
+    </div>
+    <div class="dlg-actions"><button class="btn primary" data-close type="button">Let's play</button></div>
+  </dialog>
+</body>
+</html>

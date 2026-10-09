@@ -1,0 +1,86 @@
+<!doctype html><meta charset="utf-8">
+<!-- Plays a full game through the real UI in an iframe. Open via a local web server (e.g. python3 -m http.server). -->
+<pre id="out">running</pre>
+<script type="module">
+import * as E from '../js/engine.js';
+const out = []; let fails = 0;
+const show = () => { document.getElementById('out').textContent = out.join('\n'); };
+const report = () => fetch('/result', { method: 'POST', body: out.join('\n') });
+window.addEventListener('error', e => { out.push('ERROR ' + e.message); show(); report(); });
+window.addEventListener('unhandledrejection', e => { out.push('ERROR ' + (e.reason && e.reason.stack || e.reason)); show(); report(); });
+const check = (name, ok, extra = '') => { if (!ok) fails++; out.push(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); show(); fetch('/result', { method: 'POST', body: out[out.length - 1] }); };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+fetch('/result', { method: 'POST', body: 'started' });
+localStorage.clear();
+localStorage.setItem('poker-challenge:v1', JSON.stringify({players:{Daniel:{name:'Daniel',bankroll:0,games:0,totalScore:0,best:0,wins:0,handCounts:{},created:0}},current:'Daniel',topTen:[],settings:{sound:false,introSeen:true}}));
+const frame = Object.assign(document.createElement('iframe'), { id: 'f', src: '../index.html#deal=777' });
+frame.style.cssText = 'width:1280px;height:860px;border:0';
+document.body.prepend(frame);
+await wait(1500);
+const w = document.getElementById('f').contentWindow, d = w.document;
+const q = s => d.querySelector(s);
+const boardCols = () => {
+  // Rebuild the column model from the DOM positions.
+  const cards = [...d.querySelectorAll('#board .card:not(.leaving)')].map(el => ({
+    id: el.dataset.id, x: parseFloat(el.style.getPropertyValue('--x')), y: parseFloat(el.style.getPropertyValue('--y')),
+  }));
+  const xs = [...new Set(cards.map(c => c.x))].sort((a, b) => a - b);
+  return xs.map(x => cards.filter(c => c.x === x).sort((a, b) => b.y - a.y).map(c => c.id));
+};
+const model = () => {
+  const deck = Object.fromEntries(E.makeDeck().map(c => [c.id, c]));
+  return boardCols().map(col => col.map(id => deck[id]));
+};
+const click = id => q(`#board .card[data-id="${id}"]`).click();
+
+check('board has 56 cards', d.querySelectorAll('#board .card').length === 56);
+check('DOM matches deal 777', JSON.stringify(boardCols()) === JSON.stringify(E.deal(777).map(c => c.map(x => x.id))));
+check('bankroll charged', q('#bankroll').textContent === '-$1,000', q('#bankroll').textContent);
+
+// Invalid play: two non-touching cards.
+const m0 = model();
+click(m0[0][0].id); click(m0[7][6].id);
+q('#playBtn').click();
+await wait(100);
+check('invalid play rejected', d.querySelectorAll('#board .card').length === 56 && q('#toast').textContent.length > 0, q('#toast').textContent);
+q('#clearBtn').click();
+
+// Play the best hand repeatedly until the game ends, using undo and hint once.
+let plays = 0, usedUndo = false, usedHint = false;
+while (!q('#scoreDlg').open && plays < 60) {
+  const cols = model();
+  const play = E.findHandPlays(cols)[0] || E.findJokerPlay(cols);
+  if (!play) break;
+  if (!usedHint && plays === 2) {
+    q('#hintBtn').click(); await wait(50);
+    check('hint dialog opens with riddle', q('#hintDlg').open && q('#hintText').textContent.length > 10);
+    q('#revealBtn').click(); await wait(50);
+    check('hint reveals cards', d.querySelectorAll('.card.hinted').length >= 2);
+    usedHint = true;
+  }
+  play.ids.forEach(click);
+  const label = q('#playBtn').textContent;
+  check(`preview for ${play.hand.name}`, play.hand.value ? label.includes(play.hand.name) : label === 'Play Joker', label);
+  const before = q('#score').textContent;
+  q('#playBtn').click();
+  await wait(450);
+  plays++;
+  if (!usedUndo && plays === 3) {
+    q('#undoBtn').click(); await wait(100);
+    check('undo restores score', q('#score').textContent === before, `${q('#score').textContent} vs ${before}`);
+    usedUndo = true;
+  }
+  await wait(450);
+}
+check('scoreboard shown at game end', q('#scoreDlg').open, `after ${plays} plays`);
+const final = q('#scoreTable .final')?.textContent;
+out.push(`INFO final ${final}; banner: ${q('#scoreBanner').textContent}`);
+const saved = JSON.parse(w.localStorage.getItem('poker-challenge:v1'));
+const p = saved.players.Daniel;
+check('bankroll = -1000 + final', p.bankroll === -1000 + Number(final.replace(/[$,]/g, '')), `${p.bankroll}`);
+check('top ten recorded', saved.topTen.length === 1);
+check('timer started', q('#timer').textContent !== '$2,000', q('#timer').textContent);
+out.push(fails ? `${fails} FAILED` : 'ALL PASSED');
+show();
+await report();
+</script>
