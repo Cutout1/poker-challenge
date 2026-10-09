@@ -32,7 +32,7 @@ The game will be at `https://<your-username>.github.io/poker-challenge/`.
 - A play is 2–5 cards that touch left, right, above or below and form a hand. Removed cards let the cards above fall. Empty columns close up, with the columns to the right sliding left.
 - Hand values: Pair $50, Two Pairs $125, Three of a Kind $175, Straight $200, Flush $200, Full House $250, Four of a Kind $500, Straight Flush $1,000, Royal Flush $2,000. Aces count high or low in straights.
 - Jokers aren't wild. A Joker removes one card it touches, or any card on the table if the Joker is on the bottom row. Joker plays score nothing.
-- The final score is your hands plus these bonuses:
+- The final score is your hands plus these bonuses, which only count if your hands total at least the $1,000 entry fee:
   - $250 for each different hand type made
   - $50 for each card removed
   - a bonus for finishing with 10 or fewer cards left

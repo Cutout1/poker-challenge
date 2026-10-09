@@ -269,9 +269,12 @@ export function finalScore({ handCounts, cardsRemoved, timerBonus, cardsRemainin
   const rows = HANDS.map(h => ({ ...h, count: handCounts[h.id] || 0, total: (handCounts[h.id] || 0) * h.value }));
   const gameScore = rows.reduce((s, r) => s + r.total, 0);
   const differentHands = rows.filter(r => r.count > 0).length;
-  const differentBonus = differentHands * DIFFERENT_HAND_BONUS;
-  const removedBonus = cardsRemoved * CARD_REMOVED_BONUS;
-  const clearBonus = cardsRemaining <= 10 ? CLEAR_BONUS[cardsRemaining] : 0;
+  // Bonuses only count once the hands themselves cover the entry fee.
+  const qualified = gameScore >= ENTRY_FEE;
+  const differentBonus = qualified ? differentHands * DIFFERENT_HAND_BONUS : 0;
+  const removedBonus = qualified ? cardsRemoved * CARD_REMOVED_BONUS : 0;
+  const clearBonus = qualified && cardsRemaining <= 10 ? CLEAR_BONUS[cardsRemaining] : 0;
+  if (!qualified) timerBonus = 0;
   const final = gameScore + differentBonus + removedBonus + clearBonus + timerBonus;
-  return { rows, gameScore, differentHands, differentBonus, removedBonus, clearBonus, timerBonus, final };
+  return { rows, gameScore, qualified, differentHands, differentBonus, removedBonus, clearBonus, timerBonus, final };
 }

@@ -74,6 +74,12 @@ eq('game score', fs.gameScore, 1450);
 eq('different hands bonus', fs.differentBonus, 1250);
 eq('cards removed + clear bonus', fs.removedBonus + fs.clearBonus, 3350);
 eq('final score', fs.final, 6050);
+// Hands under the entry fee earn no bonuses at all.
+const fs2 = E.finalScore({ handCounts: { pair: 5, straight: 1 }, cardsRemoved: 30, timerBonus: 1500, cardsRemaining: 4 });
+eq('under entry fee: not qualified', fs2.qualified, false);
+eq('under entry fee: no bonuses', [fs2.differentBonus, fs2.removedBonus, fs2.clearBonus, fs2.timerBonus], [0, 0, 0, 0]);
+eq('under entry fee: final is hands only', fs2.final, 450);
+eq('exactly the entry fee qualifies', E.finalScore({ handCounts: { pair: 20 }, cardsRemoved: 40, timerBonus: 0, cardsRemaining: 16 }).final, 1000 + 250 + 2000);
 
 // Random self-play: every listed play must be legal, and the game must end.
 let t0 = performance.now(), games = 0, maxPlays = 0;

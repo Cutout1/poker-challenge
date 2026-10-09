@@ -483,8 +483,9 @@ function endGame() {
 
   $('#scoreTitle').textContent = won ? 'You won!' : 'No more plays';
   const banner = [];
-  if (left <= 10) banner.push(`${CLEAR_MESSAGES[left]} That's a ${money(CLEAR_BONUS[left])} bonus.`);
-  else banner.push(won ? `Your hands beat the ${money(ENTRY_FEE)} entry fee.` : `Your hands didn't cover the ${money(ENTRY_FEE)} entry fee, but the bonuses still count.`);
+  const noBonuses = `Your hands didn't cover the ${money(ENTRY_FEE)} entry fee, so no bonuses this time.`;
+  if (left <= 10) banner.push(CLEAR_MESSAGES[left], won ? `That's a ${money(CLEAR_BONUS[left])} bonus.` : noBonuses);
+  else banner.push(won ? `Your hands beat the ${money(ENTRY_FEE)} entry fee.` : noBonuses);
   if (rank) banner.push(`New high score: #${rank} on the top ten!`);
   $('#scoreBanner').textContent = banner.join(' ');
 
@@ -496,7 +497,7 @@ function endGame() {
       <tr><th colspan="3">Game score</th><td class="num">${money(result.gameScore)}</td></tr>
       <tr><td colspan="3">Different hands (${result.differentHands}) × ${money(250)}</td><td class="num">${money(result.differentBonus)}</td></tr>
       <tr><td colspan="3">Cards removed (${game.cardsRemoved}) × ${money(50)}</td><td class="num">${money(result.removedBonus)}</td></tr>
-      ${result.clearBonus ? `<tr><td colspan="3">Only ${left} card${left === 1 ? '' : 's'} left</td><td class="num">${money(result.clearBonus)}</td></tr>` : ''}
+      ${left <= 10 ? `<tr><td colspan="3">Only ${left} card${left === 1 ? '' : 's'} left</td><td class="num">${money(result.clearBonus)}</td></tr>` : ''}
       <tr><td colspan="3">Timer bonus</td><td class="num">${money(result.timerBonus)}</td></tr>
     </tbody>
     <tfoot><tr><th colspan="3">Final score</th><td class="num final">${money(result.final)}</td></tr></tfoot>`;
