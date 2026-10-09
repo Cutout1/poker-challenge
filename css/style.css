@@ -364,21 +364,30 @@ kbd {
 @media (max-width: 560px) {
   .app { padding-left: 4px; padding-right: 4px; gap: 8px; }
   .topbar, .actionbar, .hands, .footer { margin-left: 4px; margin-right: 4px; }
-  .brand h1 { font-size: 17px; }
-  .brand-mark { width: 28px; height: 28px; }
-  .topbar { gap: 8px; }
-  .stats { order: 3; width: 100%; }
-  .stat { flex: 1; flex-direction: row; justify-content: space-between; align-items: center; padding: 4px 10px; min-width: 0; }
-  .stat-value { font-size: 17px; }
+  /* Height is the scarce resource on phones: keep the chrome compact so the
+     card table gets as much of the screen as possible. */
+  .app { gap: 6px; }
+  .brand h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .brand { gap: 8px; }
+  .brand-mark { width: 26px; height: 26px; }
+  .deal-no { font-size: 13px; }
+  .topbar { gap: 6px; }
+  .tools { gap: 4px; }
+  .tool { padding: 7px; }
+  .stats { order: 3; width: 100%; gap: 6px; }
+  .stat { flex: 1; flex-direction: row; justify-content: space-between; align-items: center; padding: 2px 10px; min-width: 0; }
+  .stat-value { font-size: 16px; }
   .table { padding: 2px; border-radius: 12px; }
-  .actionbar { padding: 6px 6px 6px 12px; }
+  .actionbar { padding: 4px 4px 4px 12px; }
   .selection { font-size: 14px; }
-  .btn { padding: 8px 12px; font-size: 14px; }
-  .hands { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .hand { padding: 3px 2px; flex-direction: row; justify-content: center; gap: 6px; }
+  .btn { padding: 7px 12px; font-size: 14px; }
+  .hands { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+  .hand { padding: 1px 2px; flex-direction: row; justify-content: center; gap: 5px; border-radius: 8px; }
   .hand-name { font-size: 11px; }
   .hand-value { font-size: 12px; }
+  .hand-count { top: -5px; font-size: 10px; padding: 0 5px; }
   .footer { gap: 10px; font-size: 13px; }
+  .player-chip { padding: 2px 10px; }
   .footer-fee { display: none; }
 }
 
