@@ -178,12 +178,15 @@ function buildBoard({ animate = true } = {}) {
 // Size cards to fit the table area.
 function measure() {
   const rect = els.table.getBoundingClientRect();
-  const gap = Math.max(3, Math.min(8, rect.width / 140));
-  const pad = 8;
+  // On narrow screens width is the limit, so squeeze the gaps and let cards
+  // grow taller into the spare height to make them easier to tap.
+  const narrow = rect.width < 560;
+  const gap = narrow ? 3 : Math.max(3, Math.min(8, rect.width / 140));
+  const pad = narrow ? 2 : 8;
   const maxW = (rect.width - pad * 2 - gap * (COLS - 1)) / COLS;
   const maxH = (rect.height - pad * 2 - gap * (ROWS - 1)) / ROWS;
-  const w = Math.max(20, Math.floor(Math.min(maxW, maxH * 5 / 7, 120)));
-  const h = Math.floor(w * 7 / 5);
+  const w = Math.max(20, Math.floor(Math.min(maxW, maxH / 1.4, 120)));
+  const h = Math.floor(Math.max(w * 1.4, Math.min(w * (narrow ? 1.6 : 1.4), maxH)));
   layoutSize = { w, h, gap };
   els.board.style.width = `${COLS * w + (COLS - 1) * gap}px`;
   els.board.style.height = `${ROWS * h + (ROWS - 1) * gap}px`;
